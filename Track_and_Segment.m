@@ -370,19 +370,7 @@ try
         tEndFrame = toc(tStartFrame);
         Kalmans = Kalmans([Kalmans.enabled]);
         Tracking.Kalmans = Kalmans;
-        if Params.mitosisParams.enable
-            tUpdateMit = tic;
-            IDs = [Kalmans(:).ID];
-            Ages = [Kalmans(:).cycle];
-            Centroids = cat(2,Kalmans(:).prev_state)';
-            Centroids = round(Centroids(:,1:2));
-            frame = Frame(t,I,L,data.Frame_name{t});
-            Tracking.mtdx.AddFrame(frame);
-            Tracking.mtdx.UpdateFrame(t, IDs', Centroids, Ages');
-            tEndUpdateMit=toc(tUpdateMit);
-            
-            fprintf('Done updating mitosis for Frame %d is %2.5f\n',t,tEndUpdateMit)
-        end
+      
         whos Kalmans
         fprintf('Elapsed time for Frame %d is %2.5f\n',t,tEndFrame)
         

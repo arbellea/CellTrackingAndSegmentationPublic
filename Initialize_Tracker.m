@@ -1,7 +1,7 @@
 function [Tracking] = Initialize_Tracker(data,tagged_data,Params)
 
 med_filt = vision.MedianFilter;
-
+INIATIAL_HD = 10;
 if strcmp(data.Type,'uint8')
     dens_x = 0:(2^8-1);
     Tracking.maxgray = 2^8-1;
@@ -13,7 +13,7 @@ DensCellPoints = [];
 DensBGPoints = [];
 Tracking.B  = 0;
 
-for t = 1:tagged_data.Frame_Num
+for t = 1:min(tagged_data.Frame_Num,2)
     %% Pre-process Image
     % Read Image
     I = double(imread(data.Frame_name{t}));
@@ -32,7 +32,7 @@ for t = 1:tagged_data.Frame_Num
         states = Calculate_State(I,L);
         Kalmans = struct('ID',num2cell([states.ID]),'count',num2cell(1:size(states,2)),'enabled',true,'kalman',[],'num_props',0,...
             'prev_state',[],'children',[],'Contour',[],...
-            'size',[],'HD',0.1,'new',true,'z_pred',[],'state_err',[],'U',[],'Mother',[],'Children',[],'cycle',0);
+            'size',[],'HD',INIATIAL_HD,'new',true,'z_pred',[],'state_err',[],'U',[],'Mother',[],'Children',[],'cycle',0);
         Kalmans = arrayfun(@(s,k) fill_Kalman(s,k),states,Kalmans);
         Tracking.B = Tracking.B +B;
         Tracking.maxCellID = max(L(:));
@@ -50,7 +50,7 @@ for t = 1:tagged_data.Frame_Num
             Kalmans(end+1).count = mcount+1;
             Kalmans(end) = fill_Kalman(states(n),Kalmans(end));
             Kalmans(end).ID = states(n).ID;
-            Kalmans(end).HD = 0.1;
+            Kalmans(end).HD = INIATIAL_HD;
             Kalmans(end).num_props = 0;
             Kalmans(end).new = true;
             Kalmans(end).enabled = true;
@@ -66,7 +66,7 @@ for t = 1:tagged_data.Frame_Num
         p2x = p2x - states(n).kalman_state(1)+Kalmans(m).prev_state(1) ;
         p2y = p2y - states(n).kalman_state(2)+Kalmans(m).prev_state(2) ;
         p1 = [p1y,p1x];p2=[p2y,p2x];
-        hd = HausdorffDist(p1,p2);
+        hd = INIATIAL_HD; %HausdorffDist(p1,p2);
         if isempty(hd)
             hd = 0;
         end

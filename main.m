@@ -2,7 +2,7 @@ function main(txtFileName)
 rng(1)
 dbclear if caught error
 myCluster = parcluster('local');
-myCluster.NumWorkers
+myCluster.NumWorkers;
 %poolobj = gcp('nocreate');
 %if isempty(poolobj)
 %poolobj = parpool(min(1,myCluster.NumWorkers),'IdleTimeout', 240);
@@ -21,12 +21,12 @@ else
     Params.Flags.profile = false;
 end
 fprintf('Loading Images... Please Wait...\n');
-if isfield(Params.load_data_params,'expr');
+if isfield(Params.load_data_params,'expr')
    expr  = Params.load_data_params.expr ;
 else
     expr  = '\w+(\d+).*';
 end
-if isfield(Params.load_data_params,'tagged_expr');
+if isfield(Params.load_data_params,'tagged_expr')
     tagged_expr = Params.load_data_params.tagged_expr;
 else 
     tagged_expr  = '\w+(\d+).*';
@@ -49,10 +49,6 @@ disp('Lets Go!!')
 saveDir = Track_and_Segment(Data,Tracking,Params,TaggedData);
 msg = sprintf('Done Analyzing %s\n Results saved at: %s',txtFileName,saveDir);
 
-if ~isempty(emailAddress)
-sendmail(emailAddress,'BGU Cluster Report #1', msg);
-end
-
 if Params.Flags.WriteVideo
     for i = 1:TaggedData.Frame_Num
     [~,fname,fext]=fileparts(Data.Frame_name{i});
@@ -61,19 +57,10 @@ if Params.Flags.WriteVideo
     end
     
     CreateOutputVideo(Data,saveDir);
-    if ~isempty(emailAddress)
-    msg = sprintf('Done Creating Video for %s\n Video saved at: %s',txtFileName,saveDir);
-    
-    sendmail(emailAddress,'BGU Cluster Report #2', msg);
-    end
 end
 
 catch err
 errmsg = getReport(err);
-if ~isempty(emailAddress)
-msg = sprintf('Error analyzing  %s!!!\n %s',txtFileName,errmsg);
-sendmail(emailAddress,'BGU Cluster Report #0', msg);
-end
 %delete(poolobj);
 if Params.Flags.profile
 if isunix
