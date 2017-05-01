@@ -1,0 +1,38 @@
+* General
+Name = 'ISBI-Fluo-C2DL-MSC-01>' % Fill in the name of the session, will be used to make output folder
+emailAddress = 'arbellea@post.bgu.ac.il' % OPTIONAL - will notify by email when the run is finished
+
+* Flags
+WriteVideo = true; % Should be true in order to write outputs
+SaveCheckPoints = 10; % Save checkpoints of the run, in case some problem occures during the run
+LoadCheckPoints = false; % Continue from a saved checkpoint
+
+% FALGS FOR DEBUGGING - NO NEED TO CHANGE
+deleteIfErr = false;
+saveCode = false;
+profile = false;
+SaveDebug = 0;
+
+* load_data_params
+data_path = fullfile('/home/arbellea/ISBI-Challenge-Data/Training/Fluo-C2DL-MSC/01/'); % Path the the directory of the raw images
+extention = '*.tif'; % Extension of the raw images should be in the format '*.<EXTENSION>'
+expr = 't(\d+)' % Experesion of filenames. Replace the time index with (\d+)
+tagged_data_path = fullfile('/home/arbellea/ISBI-Challenge-Data/Training/Fluo-C2DL-MSC/01_GT/TRA/');% Path the the directory of the segmentation of the first two frames
+tagged_extention = '*.tif'; % Extension of the raw images should be in the format '*.<EXTENSION>'
+tagged_expr = 'man_track(\d+).tif' % Experesion of filenames. Replace the time index with (\d+)
+
+* parameters
+cellPrior = 0.5; % Paramter for tuning foreground/background probabilities. parameter Alpha in the paper
+minCellSize = 500; % Parameter for minimum cell size
+stop_frame = inf % Stoping frame. In order to run all frames in the set insert inf.
+
+% ADVANCED PARAMETERS
+maxItr = 4;
+minErr = 10;
+solidityThr = 0.5;
+patchSize = 150;
+edgeQ = 2;
+edgeK = 5;
+geoOnly = false;
+BG_est_refresh = 10
+
