@@ -12,6 +12,7 @@ deleteIfErr = false;
 saveCode = false;
 profile = false;
 SaveDebug = 0;
+ISBI = true;
 
 * load_data_params
 data_path = fullfile('/home/arbellea/ISBI-Challenge-Data/Training/Fluo-C2DL-MSC/01/'); % Path the the directory of the raw images

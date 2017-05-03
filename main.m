@@ -20,6 +20,9 @@ if isfield(Params.Flags,'profile')&&Params.Flags.profile
 else
     Params.Flags.profile = false;
 end
+if ~isfield(Params.Flags,'ISBI')
+    Params.Flags.ISBI = false;
+end
 fprintf('Loading Images... Please Wait...\n');
 if isfield(Params.load_data_params,'expr')
    expr  = Params.load_data_params.expr ;
@@ -50,9 +53,13 @@ saveDir = Track_and_Segment(Data,Tracking,Params,TaggedData);
 msg = sprintf('Done Analyzing %s\n Results saved at: %s',txtFileName,saveDir);
 
 if Params.Flags.WriteVideo
-    for i = 1:TaggedData.Frame_Num
-    [~,fname,fext]=fileparts(Data.Frame_name{i});
-    segfile = fullfile(saveDir,'Results',sprintf('Seg_%s%s',fname,fext));
+    for i = 1:2
+        if Params.Flags.ISBI
+            segfile = fullfile(saveDir,'Results',sprintf('mask%03d.tif',i-1));
+        else
+            [~,fname,fext]=fileparts(Data.Frame_name{i});
+            segfile = fullfile(saveDir,'Results',sprintf('Seg_%s%s',fname,fext));
+        end
     copyfile(TaggedData.Frame_name{i},segfile,'f');
     end
     

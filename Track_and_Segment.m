@@ -11,6 +11,7 @@ LoadCheckPoints = Params.Flags.LoadCheckPoints;
 segParams = Params.parameters;
 save_debug = Params.Flags.SaveDebug;
 deleteIfErr = Params.Flags.deleteIfErr;
+ISBI = Params.Flags.ISBI;
 t = datestr(now);
 t(t==' ')='_';
 t(t==':')='-';
@@ -90,7 +91,7 @@ try
         I = I-Tracking.B;
         I = max(I,0);
         I = step(Tracking.med_filt,I);
-        figure(1); imshow(I,[]);
+        %figure(1); imshow(I,[]);
         I_prev = double(imread(data.Frame_name{t-1}));
         I_prev = I_prev-Tracking.B;
         I_prev = max(I_prev,0);
@@ -139,6 +140,8 @@ try
             Kalmans(n).num_props = 0;
             Kalmans(n).size = states(n).size;
             Kalmans(n).cycle = Kalmans(n).cycle+1;
+            Tracking.ISBI_RES(Tracking.ISBI_RES(:,1)==Kalmans(n).ID,3) = Tracking.ISBI_RES(Tracking.ISBI_RES(:,1)==Kalmans(n).ID, 3)+1;
+            
         end
         timeUp = toc(tUp);
         fprintf('Done State update of frame %d in %f seconds...\n',t,timeUp);
@@ -189,7 +192,9 @@ try
                 Kalmans(m).Contour = states(n).Contour;
                 Kalmans(m).Mother = [];
                 Kalmans(m).cycle = 1;
+                
                 L(fullSingle(Kalmans(m).BW)) = Kalmans(m).ID;
+                Tracking.ISBI_RES = cat(1,Tracking.ISBI_RES,[Kalmans(m).ID,t-1,t-1,0]);
             end
             Tracking.maxCellID  = Tracking.maxCellID + uniqe_L(n);
             timeNUp = toc(tnUp);
@@ -199,15 +204,17 @@ try
         if ~isempty(disabeledKalmans)
             tmitLink = tic;
             for n = 1:length(disabeledKalmans)
-                if ~isempty(disabeledKalmans(n).Children);
+                
+                if ~isempty(disabeledKalmans(n).Children)
                     motherID = disabeledKalmans(n).ID;
                     children = zeros(length(disabeledKalmans(n).Children),1);
                     for child = 1:length(disabeledKalmans(n).Children)
 
                         Kalmans([Kalmans.ID]==L(disabeledKalmans(n).Children(child).PixelIdxList(1))).Mother=disabeledKalmans(n).ID;
                         children(child) =L(disabeledKalmans(n).Children(child).PixelIdxList(1)) ;
+                        Tracking.ISBI_RES(Tracking.ISBI_RES(:,1)==children(child),4)=motherID;
                     end
-                    if ~isfield(Link,'Mother');
+                    if ~isfield(Link,'Mother')
                         Link(1).Mother = motherID;
                         Link(1).Children = children;
                         Link(1).Time = t;
@@ -216,7 +223,10 @@ try
                         Link(end).Children = children;
                         Link(end).Time = t;
                     end
+                    
                 end
+                
+                Tracking.ISBI_RES(Tracking.ISBI_RES(:,1)==disabeledKalmans(n).ID,3)=t-2;
             end
             timeMitLink = toc(tmitLink);
             fprintf('Done Mitosis Link of frame %d in %f seconds...\n',t,timeMitLink);
@@ -245,10 +255,15 @@ try
         tSave = tic;
         if Save_images
             
-            [~,fname,ext]=fileparts(data.Frame_name{t});
-            frame_name = sprintf('Seg_%s%s',fname,ext);
-            frame_name = fullfile(save_dir_res,frame_name);
-            imwrite(uint16(L(1:end,1:end)),frame_name);
+            if ISBI
+                frame_name = fullfile(save_dir_res,sprintf('mask%03d.tif',t-1));
+            else
+                [~,fname,ext]=fileparts(data.Frame_name{t});
+                frame_name = sprintf('Seg_%s%s',fname,ext);
+                frame_name = fullfile(save_dir_res,frame_name);
+            end
+            imwrite(uint16(L),frame_name);
+            
             
         end
         timeSave = toc(tSave);
@@ -374,6 +389,9 @@ try
         whos Kalmans
         fprintf('Elapsed time for Frame %d is %2.5f\n',t,tEndFrame)
         
+    end
+    if ISBI
+        dlmwrite(fullfile(save_dir_name,'res_track.txt'),Tracking.ISBI_RES,' ')
     end
     if Save_images
         save(fullfile(save_dir_name,'Link.mat'),'Link');

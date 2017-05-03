@@ -12,6 +12,7 @@ end
 DensCellPoints = [];
 DensBGPoints = [];
 Tracking.B  = 0;
+Tracking.ISBI_RES = [];
 
 for t = 1:min(tagged_data.Frame_Num,2)
     %% Pre-process Image
@@ -36,6 +37,7 @@ for t = 1:min(tagged_data.Frame_Num,2)
         Kalmans = arrayfun(@(s,k) fill_Kalman(s,k),states,Kalmans);
         Tracking.B = Tracking.B +B;
         Tracking.maxCellID = max(L(:));
+        Tracking.ISBI_RES = cat(2,[states.ID]',zeros(length([states.ID]),3));
         continue;
     end
     %% Predict and Correct
