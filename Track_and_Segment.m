@@ -88,6 +88,7 @@ try
         [~,mbgidx] = max(Tracking.dens_BG);
         mBG1 = Tracking.dens_x(mbgidx);
         I = double(imread(data.Frame_name{t}));
+        %I = medfilt2(I,[3,3]);
         I = I-Tracking.B;
         I = max(I,0);
         I = step(Tracking.med_filt,I);
@@ -99,7 +100,7 @@ try
         
         tSeg = tic;
         fprintf('Start Segmentation of frame %d...\n',t);
-        [L,L_New_Cells,Kalmans,z_pred,z_pred_orig,cog_diff,Debug] = Fuzzy_Segmentation(Tracking,Kalmans,I,I_prev,segParams,any(save_debug));
+        [L,L_New_Cells,Kalmans,z_pred,z_pred_orig,cog_diff,Debug] = Fuzzy_Segmentation(Tracking,Kalmans,I,I_prev,segParams,any(save_debug),t);
         disabeledKalmans = Kalmans(~[Kalmans.enabled]);
         z_pred_orig = z_pred_orig(~[Kalmans.enabled]);
         L_New_Cells_orig = L_New_Cells;
@@ -226,7 +227,7 @@ try
                     
                 end
                 
-                Tracking.ISBI_RES(Tracking.ISBI_RES(:,1)==disabeledKalmans(n).ID,3)=t-2;
+                
             end
             timeMitLink = toc(tmitLink);
             fprintf('Done Mitosis Link of frame %d in %f seconds...\n',t,timeMitLink);
@@ -291,14 +292,9 @@ try
         BG_est_refresh = Params.parameters.BG_est_refresh;
         if mod(t,BG_est_refresh)==0&&exist('DensCellPoints','var')&&exist('DensBGPoints','var')
             LCells = L>0;
-            
             LBG = ~(LCells);
-            
-            
             DensCellPoints = cat(1,DensCellPoints,I(LCells&I<Tracking.maxgray));
             DensBGPoints = cat(1,DensBGPoints,I(LBG));
-            
-           
             if isfield(Params.parameters,'useGMM')&&Params.parameters.useGMM
                 Kbg = Params.parameters.Kbg;
                 Kfg = Params.parameters.Kfg;
@@ -309,9 +305,7 @@ try
                 gmmFG = gmdistribution(gmmFG.mu,gmmFG.Sigma,ones(1,Kfg)./Kfg);
                 Tracking.dens_BG = pdf(gmmBG,Tracking.dens_x');
                 Tracking.dens_cells = pdf(gmmFG,Tracking.dens_x');
-                if isfield(Params.parameters,'useLocalGL')&&Params.parameters.useLocalGL
-                    
-                    
+                if isfield(Params.parameters,'useLocalGL')&&Params.parameters.useLocalGL                    
                     Kbg = Params.parameters.Kbg;
                     Kfg = Params.parameters.Kfg;
                     gmmOpts = statset('MaxIter',500);
@@ -342,7 +336,15 @@ try
                         end
                     end
                 end
-                
+            elseif  isfield(Params.parameters,'HDGMM')&&Params.parameters.HDGMM
+                Images{end+1} = I;
+                Labels = cat(1,Labels,L(:));
+                Features = calcFeatures(Images);
+                [gmmFG, gmmBG] = calcGMMs(Features, Labels, Kfg, Kbg);
+                Tracking.gmmFG = gmmFG;
+                Tracking.gmmBG = gbbBG;
+                Images = {};
+                Labels = [];
             else
                 u = (4/(3*min(numel(DensBGPoints)+numel(DensCellPoints))))^(1./5)*max(std(DensCellPoints),std(DensBGPoints));
                 dens_cells = FastKDE(DensCellPoints,Tracking.dens_x,u);
@@ -362,21 +364,26 @@ try
         else
             if isfield(Params.parameters,'useLocalGL')&&Params.parameters.useLocalGL
                 for n = 1:numel(Kalmans)
-                if Kalmans(n).enabled
-                    if ~isfield(Kalmans(n),'DensCellPoints')
-                        Kalmans(n).DensCellPoints =[];
-                        Kalmans(n).DensBGPoints =[];
+                    if Kalmans(n).enabled
+                        if ~isfield(Kalmans(n),'DensCellPoints')
+                            Kalmans(n).DensCellPoints =[];
+                            Kalmans(n).DensBGPoints =[];
+                        end
+                        cent = Kalmans(n).state(2:-1:1);
+                        L_cropped = CropImage(L,cent,Params.parameters.patchSize,Params.parameters.patchSize);
+                        I_cropped = CropImage(I,cent,Params.parameters.patchSize,Params.parameters.patchSize);
+                        Kalmans(n).DensCellPoints = cat(1,Kalmans(n).DensCellPoints,I_cropped(L_cropped(:)>0));
+                        Kalmans(n).DensBGPoints = cat(1,Kalmans(n).DensBGPoints,I_cropped(L_cropped(:)==0));
                     end
-                    cent = Kalmans(n).state(2:-1:1);
-                    L_cropped = CropImage(L,cent,Params.parameters.patchSize,Params.parameters.patchSize);
-                    I_cropped = CropImage(I,cent,Params.parameters.patchSize,Params.parameters.patchSize);
-                    Kalmans(n).DensCellPoints = cat(1,Kalmans(n).DensCellPoints,I_cropped(L_cropped(:)>0));
-                    Kalmans(n).DensBGPoints = cat(1,Kalmans(n).DensBGPoints,I_cropped(L_cropped(:)==0));
-                end
                 end
             end
-                DensCellPoints = cat(1,DensCellPoints,I(LCells&I<Tracking.maxgray));
-                DensBGPoints = cat(1,DensBGPoints,I(LBG));
+                if Params.parameters.HDGMM
+                    Images{end+1} = I;
+                    Labels = cat(1, Labels,L(:));
+                else
+                    DensCellPoints = cat(1,DensCellPoints,I(LCells&I<Tracking.maxgray));
+                    DensBGPoints = cat(1,DensBGPoints,I(LBG));
+                end
             
         end
         timeKDE = toc(tKDE);
@@ -391,7 +398,7 @@ try
         
     end
     if ISBI
-        dlmwrite(fullfile(save_dir_name,'res_track.txt'),Tracking.ISBI_RES,' ')
+        dlmwrite(fullfile(save_dir_name,'Results','res_track.txt'),Tracking.ISBI_RES,' ')
     end
     if Save_images
         save(fullfile(save_dir_name,'Link.mat'),'Link');

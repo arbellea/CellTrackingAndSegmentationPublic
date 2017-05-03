@@ -1,4 +1,4 @@
-function CreateOutputVideo(inputInfo,saveDir)
+function CreateOutputVideo(inputInfo,saveDir, ISBI)
 %{
 filelist = dir(fullfile(segDir,ext));
 base = ['Seg_%d',ext(2:end)];
@@ -62,7 +62,12 @@ try
         
         
         [~,fname,fext]=fileparts(inputInfo.Frame_name{t});
-        segfile = fullfile(saveDir,'Results',sprintf('Seg_%s%s',fname,fext));
+        if ISBI
+            segfile = fullfile(saveDir,'Results',sprintf('mask%03d.tif',t-1));
+        else
+            segfile = fullfile(saveDir,'Results',sprintf('Seg_%s%s',fname,fext));
+        end
+        
         
         if ~exist(segfile,'file') && c
             continue;

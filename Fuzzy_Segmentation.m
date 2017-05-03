@@ -1,4 +1,4 @@
-function [L,L_New_Cell,Kalmans,z_pred,z_pred_orig,cog_diff,DEBUG] = Fuzzy_Segmentation(Tracking,Kalmans,I,I_prev,params,save_debug) %#ok<INUSD>
+function [L,L_New_Cell,Kalmans,z_pred,z_pred_orig,cog_diff,DEBUG] = Fuzzy_Segmentation(Tracking,Kalmans,I,I_prev,params,save_debug,t) %#ok<INUSD>
 [Height,Width]=size(I);
 [X,Y] = meshgrid(1:Width,1:Height);
 conserveMemory = true;
@@ -68,16 +68,21 @@ else
     DEBUG = [];
 end
 try
-    pGrayGlobal = alpha*Tracking.dens_cells./(alpha*(Tracking.dens_cells)+(1-alpha)*Tracking.dens_BG);
-    PBG = Tracking.dens_BG(round(I)+1);    
-    P_Cell = Tracking.dens_cells(round(I)+1);
-    nBG = pGrayGlobal(round(I)+1);
-    
-    PBG_prev = Tracking.dens_BG(round(I_prev)+1);
-    P_Cell_prev = Tracking.dens_cells(round(I_prev)+1);
-    
-    
-    nBG_prev = pGrayGlobal(round(I_prev)+1);
+    if params.HDGMM
+        nBG = calcGMMProb(I,Tracking.gmmFG, Tracking.gmmBG, alpha);
+        
+    else
+        pGrayGlobal = alpha*Tracking.dens_cells./(alpha*(Tracking.dens_cells)+(1-alpha)*Tracking.dens_BG);
+        %PBG = Tracking.dens_BG(round(I)+1);    
+        %P_Cell = Tracking.dens_cells(round(I)+1);
+        nBG = pGrayGlobal(round(I)+1);
+
+        %PBG_prev = Tracking.dens_BG(round(I_prev)+1);
+        %P_Cell_prev = Tracking.dens_cells(round(I_prev)+1);
+
+
+        %nBG_prev = pGrayGlobal(round(I_prev)+1);
+    end
     if regImages
     [optimizer, metric]  = imregconfig('monomodal');
     tform = imregtform(I, I_prev, 'translation', optimizer, metric);
@@ -464,7 +469,7 @@ try
         cell_area = cellfun(@(u) sum(u(:)),U,'uniformoutput',false);
         [err,err_idx] = max(sqrt(sum((cell2mat(cell_area)-cell2mat(prev_size)).^2,1)));
         if any([cell_area{:}]==0)
-            remove_cell = [cell_area{:}]>0;
+            remove_cell = full([cell_area{:}]>0);
             BWs = BWs(remove_cell);
             %BWs_stat = BWs_stat(remove_cell);
             %BW_cropped_stat = BW_cropped_stat(remove_cell);
@@ -543,7 +548,9 @@ try
         NotBGFull(cat(1,removeCandidate(:).PixelIdxList)) = 1;
         candidates_cropped = candidates_cropped([candidates_cropped.Solidity]>Solidity_Thr&[candidates_cropped.Area]>min_cell_size);
         NotBG_Candidates_l =  NotBG_Candidates_l([NotBG_Candidates_l.Solidity]>Solidity_Thr&[NotBG_Candidates_l.Area]>min_cell_size);
-        
+        if length(NotBG_Candidates_l)==0
+            Kalmans([Kalmans.ID]==l).enabled=false;
+        end
         if length(NotBG_Candidates_l)<=1
             continue
         end

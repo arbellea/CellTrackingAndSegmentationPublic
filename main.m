@@ -1,6 +1,6 @@
 function main(txtFileName)
 rng(1)
-dbclear if caught error
+%dbclear if caught error
 myCluster = parcluster('local');
 myCluster.NumWorkers;
 %poolobj = gcp('nocreate');
@@ -63,7 +63,7 @@ if Params.Flags.WriteVideo
     copyfile(TaggedData.Frame_name{i},segfile,'f');
     end
     
-    CreateOutputVideo(Data,saveDir);
+    CreateOutputVideo(Data,saveDir, Params.Flags.ISBI);
 end
 
 catch err

@@ -13,11 +13,14 @@ DensCellPoints = [];
 DensBGPoints = [];
 Tracking.B  = 0;
 Tracking.ISBI_RES = [];
+Images = {[],[]};
+Labels = [];
 
 for t = 1:min(tagged_data.Frame_Num,2)
     %% Pre-process Image
     % Read Image
     I = double(imread(data.Frame_name{t}));
+%    I = medfilt2(I,[3,3]);
     L = double(imread(tagged_data.Frame_name{t}));
     Tracking.L = L;
     % Calculate and remove Background lighting
@@ -26,8 +29,16 @@ for t = 1:min(tagged_data.Frame_Num,2)
     I = max(I,0);
     LCells = L>0;
     LBG = ~LCells;
+    if Params.parameters.useGMM&&Params.parameters.HDGMM
+        Images{t} = I;
+        Labels = cat(1,Labels,L(:));
+        
+    else
     DensCellPoints = cat(1,DensCellPoints,I(LCells&I<Tracking.maxgray));
     DensBGPoints = cat(1,DensBGPoints,I(LBG));
+    end
+    
+    
     %% Create Kalman and predict
     if t==1
         states = Calculate_State(I,L);
@@ -37,7 +48,7 @@ for t = 1:min(tagged_data.Frame_Num,2)
         Kalmans = arrayfun(@(s,k) fill_Kalman(s,k),states,Kalmans);
         Tracking.B = Tracking.B +B;
         Tracking.maxCellID = max(L(:));
-        Tracking.ISBI_RES = cat(2,[states.ID]',zeros(length([states.ID]),3));
+        Tracking.ISBI_RES = cat(2,[states.ID]',zeros(size([states.ID]')), ones(size([states.ID]')),zeros(size([states.ID]')));
         continue;
     end
     %% Predict and Correct
@@ -88,34 +99,41 @@ if isfield(Params.parameters,'useGMM')&&Params.parameters.useGMM
    
     Kbg = Params.parameters.Kbg;
     Kfg = Params.parameters.Kfg;
-    gmmOpts = statset('MaxIter',500);
-    gmmBG = fitgmdist(DensBGPoints(DensBGPoints>0),Kbg,'Options',gmmOpts);
-    gmmFG = fitgmdist(DensCellPoints(DensCellPoints>0),Kfg,'Options',gmmOpts);
-    gmmBG = gmdistribution(gmmBG.mu,gmmBG.Sigma,ones(1,Kbg)./Kbg);
-    gmmFG = gmdistribution(gmmFG.mu,gmmFG.Sigma,ones(1,Kfg)./Kfg);
-    Tracking.dens_BG = pdf(gmmBG,dens_x');
-    Tracking.dens_cells = pdf(gmmFG,dens_x');
-    if isfield(Params.parameters,'useLocalGL')&&Params.parameters.useLocalGL
-        Kbg = Params.parameters.Kbg;
-        Kfg = Params.parameters.Kfg;
+    if isfield(Params.parameters,'HDGMM')&&Params.parameters.HDGMM
+        Features = calcFeatures(Images);
+        [gmmFG, gmmBG] = calcGMMs(Features, Labels, Kfg, Kbg);
+        Tracking.gmmFG = gmmFG;
+        Tracking.gmmBG = gmmBG;
+    else
         gmmOpts = statset('MaxIter',500);
-        for n = 1:numel(Kalmans)
-            if Kalmans(n).enabled
-                if ~isfield(Kalmans(n),'DensCellPoints')
-                    Kalmans(n).DensCellPoints =[];
-                    Kalmans(n).DensBGPoints =[];
+        gmmBG = fitgmdist(DensBGPoints(DensBGPoints>0),Kbg,'Options',gmmOpts);
+        gmmFG = fitgmdist(DensCellPoints(DensCellPoints>0),Kfg,'Options',gmmOpts);
+        gmmBG = gmdistribution(gmmBG.mu,gmmBG.Sigma,ones(1,Kbg)./Kbg);
+        gmmFG = gmdistribution(gmmFG.mu,gmmFG.Sigma,ones(1,Kfg)./Kfg);
+        Tracking.dens_BG = pdf(gmmBG,dens_x');
+        Tracking.dens_cells = pdf(gmmFG,dens_x');
+        if isfield(Params.parameters,'useLocalGL')&&Params.parameters.useLocalGL
+            Kbg = Params.parameters.Kbg;
+            Kfg = Params.parameters.Kfg;
+            gmmOpts = statset('MaxIter',500);
+            for n = 1:numel(Kalmans)
+                if Kalmans(n).enabled
+                    if ~isfield(Kalmans(n),'DensCellPoints')
+                        Kalmans(n).DensCellPoints =[];
+                        Kalmans(n).DensBGPoints =[];
+                    end
+                    cent = Kalmans(n).state(2:-1:1);
+                    L_cropped = CropImage(L,cent,Params.parameters.patchSize,Params.parameters.patchSize);
+                    I_cropped = CropImage(I,cent,Params.parameters.patchSize,Params.parameters.patchSize);
+                    Kalmans(n).DensCellPoints = cat(1,Kalmans(n).DensCellPoints,I_cropped(L_cropped(:)>0));
+                    Kalmans(n).DensBGPoints = cat(1,Kalmans(n).DensBGPoints,I_cropped(L_cropped(:)==0));
+                    gmmBG = fitgmdist(Kalmans(n).DensBGPoints(Kalmans(n).DensBGPoints>0),Kbg,'Options',gmmOpts);
+                    gmmFG = fitgmdist(Kalmans(n).DensCellPoints(Kalmans(n).DensCellPoints>0),Kfg,'Options',gmmOpts);
+                    gmmBG = gmdistribution(gmmBG.mu,gmmBG.Sigma,ones(1,Kbg)./Kbg);
+                    gmmFG = gmdistribution(gmmFG.mu,gmmFG.Sigma,ones(1,Kfg)./Kfg);
+                    Kalmans(n).dens_BG = pdf(gmmBG,dens_x');
+                    Kalmans(n).dens_cells = pdf(gmmFG,dens_x');
                 end
-                cent = Kalmans(n).state(2:-1:1);
-                L_cropped = CropImage(L,cent,Params.parameters.patchSize,Params.parameters.patchSize);
-                I_cropped = CropImage(I,cent,Params.parameters.patchSize,Params.parameters.patchSize);
-                Kalmans(n).DensCellPoints = cat(1,Kalmans(n).DensCellPoints,I_cropped(L_cropped(:)>0));
-                Kalmans(n).DensBGPoints = cat(1,Kalmans(n).DensBGPoints,I_cropped(L_cropped(:)==0));
-                gmmBG = fitgmdist(Kalmans(n).DensBGPoints(Kalmans(n).DensBGPoints>0),Kbg,'Options',gmmOpts);
-                gmmFG = fitgmdist(Kalmans(n).DensCellPoints(Kalmans(n).DensCellPoints>0),Kfg,'Options',gmmOpts);
-                gmmBG = gmdistribution(gmmBG.mu,gmmBG.Sigma,ones(1,Kbg)./Kbg);
-                gmmFG = gmdistribution(gmmFG.mu,gmmFG.Sigma,ones(1,Kfg)./Kfg);
-                Kalmans(n).dens_BG = pdf(gmmBG,dens_x');
-                Kalmans(n).dens_cells = pdf(gmmFG,dens_x');
             end
         end
     end
