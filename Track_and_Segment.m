@@ -5,6 +5,8 @@ if ~isempty(varargin)&&isstruct(varargin{1})
 end
 
 Link = struct();
+Images = {};
+Labels = [];
 Save_images = Params.Flags.WriteVideo;
 SaveCheckPoints = Params.Flags.SaveCheckPoints;
 LoadCheckPoints = Params.Flags.LoadCheckPoints;
