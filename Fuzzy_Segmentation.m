@@ -532,6 +532,7 @@ try
         L(L==l&~BW) = 0;
         if ~any(BW(:))
             continue;
+            Kalmans([Kalmans.ID]==l).enabled=false;
         end
         NotBG_Candidates_l = regionprops(BW,'Solidity','Area','PixelIdxList','Centroid');
         cs = fliplr(cat(1,NotBG_Candidates_l(:).Centroid));

@@ -8,7 +8,7 @@ myCluster.NumWorkers;
 %poolobj = parpool(min(1,myCluster.NumWorkers),'IdleTimeout', 240);
 %end
 if ~isunix
-dbstop if caught error
+%dbstop if caught error
 end
 addpath(genpath(fullfile('.','SourceCode')));
 warning off;

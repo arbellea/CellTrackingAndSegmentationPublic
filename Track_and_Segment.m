@@ -87,12 +87,12 @@ try
             save(fullfile(save_dir_name,'CheckPoints',sprintf('CheckPoint_%d.mat',t)),'-struct','Tracking');
         end
         tStartFrame = tic;
-        [~,mbgidx] = max(Tracking.dens_BG);
-        mBG1 = Tracking.dens_x(mbgidx);
+        
         I = double(imread(data.Frame_name{t}));
         %I = medfilt2(I,[3,3]);
         I = I-Tracking.B;
         I = max(I,0);
+        I = I./max(I(:))*Tracking.maxgray;
         I = step(Tracking.med_filt,I);
         %figure(1); imshow(I,[]);
         I_prev = double(imread(data.Frame_name{t-1}));
@@ -297,7 +297,7 @@ try
             LBG = ~(LCells);
             DensCellPoints = cat(1,DensCellPoints,I(LCells&I<Tracking.maxgray));
             DensBGPoints = cat(1,DensBGPoints,I(LBG));
-            if isfield(Params.parameters,'useGMM')&&Params.parameters.useGMM
+            if isfield(Params.parameters,'useGMM')&&Params.parameters.useGMM&&~(isfield(Params.parameters,'HDGMM')&&Params.parameters.HDGMM)
                 Kbg = Params.parameters.Kbg;
                 Kfg = Params.parameters.Kfg;
                 gmmOpts = statset('MaxIter',500);
@@ -342,9 +342,11 @@ try
                 Images{end+1} = I;
                 Labels = cat(1,Labels,L(:));
                 Features = calcFeatures(Images);
+                Kbg = Params.parameters.Kbg;
+                Kfg = Params.parameters.Kfg;
                 [gmmFG, gmmBG] = calcGMMs(Features, Labels, Kfg, Kbg);
                 Tracking.gmmFG = gmmFG;
-                Tracking.gmmBG = gbbBG;
+                Tracking.gmmBG = gmmBG;
                 Images = {};
                 Labels = [];
             else
