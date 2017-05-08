@@ -1,17 +1,17 @@
 * General
-Name = 'ISBI-Fluo-N2DL-HeLa-01' % Fill in the name of the session, will be used to make output folder
+Name = 'ISBI-Fluo-N2DL-HeLa-01_2' % Fill in the name of the session, will be used to make output folder
 emailAddress = 'arbellea@post.bgu.ac.il' % OPTIONAL - will notify by email when the run is finished
 
 * load_data_params
 data_path = fullfile('/home/arbellea/ISBI-Challenge-Data/Training/Fluo-N2DL-HeLa/01/'); % Path the the directory of the raw images
 extention = '*.tif'; % Extension of the raw images should be in the format '*.<EXTENSION>'
 expr = 't(\d+)' % Experesion of filenames. Replace the time index with (\d+)
-tagged_data_path = fullfile('/home/arbellea/ISBI-Challenge-Data/Training/Fluo-N2DL-HeLa/01_GT/SEG/');% Path the the directory of the segmentation of the first two frames
+tagged_data_path = fullfile('/home/arbellea/ISBI-Challenge-Data/Training/Fluo-N2DL-HeLa/01_MAN/');% Path the the directory of the segmentation of the first two frames
 tagged_extention = '*.tif'; % Extension of the raw images should be in the format '*.<EXTENSION>'
-tagged_expr = 'man_seg(\d+).tif' % Experesion of filenames. Replace the time index with (\d+)
+tagged_expr = 'ManualSeg_(\d+).tif' % Experesion of filenames. Replace the time index with (\d+)
 
 * parameters
-cellPrior = 0.5; % Paramter for tuning foreground/background probabilities. parameter Alpha in the paper
+cellPrior = 0.95; % Paramter for tuning foreground/background probabilities. parameter Alpha in the paper
 minCellSize = 50; % Parameter for minimum cell size
 stop_frame = inf % Stoping frame. In order to run all frames in the set insert inf.
 
