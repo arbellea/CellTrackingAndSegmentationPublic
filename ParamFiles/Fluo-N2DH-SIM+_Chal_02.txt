@@ -1,18 +1,18 @@
 * General
-Name = 'ISBI-Fluo-N2DL-HeLa-01_3' % Fill in the name of the session, will be used to make output folder
+Name = 'ISBI-Fluo-N2DH-SIM+Chal-02_RUN3' % Fill in the name of the session, will be used to make output folder
 emailAddress = 'arbellea@post.bgu.ac.il' % OPTIONAL - will notify by email when the run is finished
 
 * load_data_params
-data_path = fullfile('/home/arbellea/ISBI-Challenge-Data/Training/Fluo-N2DL-HeLa/01/'); % Path the the directory of the raw images
+data_path = fullfile('/home/arbellea/ISBI-Challenge-Data/Challenge/Fluo-N2DH-SIM+/02/'); % Path the the directory of the raw images
 extention = '*.tif'; % Extension of the raw images should be in the format '*.<EXTENSION>'
 expr = 't(\d+)' % Experesion of filenames. Replace the time index with (\d+)
-tagged_data_path = fullfile('/home/arbellea/ISBI-Challenge-Data/Training/Fluo-N2DL-HeLa/01_MAN/');% Path the the directory of the segmentation of the first two frames
+tagged_data_path = fullfile('/home/arbellea/ISBI-Challenge-Data/Challenge/Fluo-N2DH-SIM+/02_MAN/');% Path the the directory of the segmentation of the first two frames
 tagged_extention = '*.tif'; % Extension of the raw images should be in the format '*.<EXTENSION>'
 tagged_expr = 'ManualSeg_(\d+).tif' % Experesion of filenames. Replace the time index with (\d+)
 
 * parameters
 cellPrior = 0.8; % Paramter for tuning foreground/background probabilities. parameter Alpha in the paper
-minCellSize = 100; % Parameter for minimum cell size
+minCellSize = 500; % Parameter for minimum cell size
 stop_frame = inf % Stoping frame. In order to run all frames in the set insert inf.
 
 % ADVANCED PARAMETERS
@@ -23,18 +23,17 @@ patchSize = 150;
 edgeQ = 2;
 edgeK = 5;
 geoOnly = false;
-BG_est_refresh = 10
+BG_est_refresh = 1
 useGMM = true % True for GMM, False for KDE
 HDGMM = true
-Kbg = 1; % Only relevant when useGMM=true
-Kfg = 2; % Only relevant when useGMM=true
+Kbg = 2; % Only relevant when useGMM=true
+Kfg = 5; % Only relevant when useGMM=true
 useLocalGL = false;
-
 
 * Flags
 WriteVideo = true; % Should be true in order to write outputs
-SaveCheckPoints = 10; % Save checkpoints of the run, in case some problem occures during the run
-LoadCheckPoints = false; % Continue from a saved checkpoint
+SaveCheckPoints = 1; % Save checkpoints of the run, in case some problem occures during the run
+LoadCheckPoints = 50; % Continue from a saved checkpoint
 
 % FALGS FOR DEBUGGING - NO NEED TO CHANGE
 deleteIfErr = false;

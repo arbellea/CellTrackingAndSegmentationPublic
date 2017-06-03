@@ -41,7 +41,7 @@ if isfield(Kalmans,'U')
 else
    uniqueL = unique(L(L>0));
    states = struct('ID',[],'kalman_state',[],'BW',[],'Contour',[]);
-for i = 1:length(uniqueL);
+for i = 1:length(uniqueL)
     l = uniqueL(i);
     if l==0
         continue

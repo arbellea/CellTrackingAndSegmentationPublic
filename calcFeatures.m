@@ -10,12 +10,13 @@ for i = 1:numel(Images)
     std1 = stdfilt(I,ones(3));
     std2 = stdfilt(I,ones(11));
     lap = abs(imfilter(I,laph));
-    lOg = imfilter(I,lOgh);
+    lOg = abs(imfilter(I,lOgh));
     sob1 = imfilter(I,sobh);
     sob2 = imfilter(I,sobh');
     sob = sqrt(sob1.^2+sob2.^2);    
     g = imfilter(I,h);
     Data_i = cat(2,I(:),g(:),std1(:),std2(:),lap(:),lOg(:),sob(:));
+    %Data_i = cat(2,I(:),g(:),std1(:));%,std2(:),lap(:),lOg(:),sob(:));
     Data = cat(1,Data,Data_i);
 end
 Data_std = std(Data,0,1);

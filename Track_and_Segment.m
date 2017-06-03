@@ -92,8 +92,8 @@ try
         %I = medfilt2(I,[3,3]);
         I = I-Tracking.B;
         I = max(I,0);
-        I = I./max(I(:))*Tracking.maxgray;
-        I = step(Tracking.med_filt,I);
+        I = I./(Tracking.maxgray-max(Tracking.B(:)))*Tracking.maxgray;
+        %I = step(Tracking.med_filt,I);
         %figure(1); imshow(I,[]);
         I_prev = double(imread(data.Frame_name{t-1}));
         I_prev = I_prev-Tracking.B;

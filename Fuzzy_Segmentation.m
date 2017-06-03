@@ -1,7 +1,7 @@
 function [L,L_New_Cell,Kalmans,z_pred,z_pred_orig,cog_diff,DEBUG] = Fuzzy_Segmentation(Tracking,Kalmans,I,I_prev,params,save_debug,t) %#ok<INUSD>
 [Height,Width]=size(I);
 [X,Y] = meshgrid(1:Width,1:Height);
-conserveMemory = true;
+conserveMemory = false;
 global counter
 XY = [Y(:),X(:)]';
 
@@ -178,7 +178,7 @@ try
             sumDist_stat =reshape(sum(cat(2,Dist_stat{:}),2)+eps,size(X));
             last_mu_orig = last_mu;
             %mu = cellfun(@(m,p) FindMostLiklymuGray(nBG,invG,m,p),mu,P_pred,'uniformoutput',0);
-            mu = cellfun(@(d) FindMostLiklymuGray2(nBG,invG,reshape(d.^2,size(X)),sumDist,ones(size(X))),Dist,'uniformoutput',0);
+            %mu = cellfun(@(d) FindMostLiklymuGray2(nBG,invG,reshape(d.^2,size(X)),sumDist,ones(size(X))),Dist,'uniformoutput',0);
             last_mu = cellfun(@(d) FindMostLiklymuGray2(nBG,invG,reshape(d.^2,size(X)),sumDist_stat,ones(size(X))),Dist_stat,'uniformoutput',0);
             
             if conserveMemory
@@ -409,10 +409,10 @@ try
             %P = cellfun(@(Im,m) PadImage(Im,m,patchSize,patchSize,Height,Width,0),P_cropped_tot,mu,'uniformoutput',0);
             
             counter = 0;
-            alpha = min([cellSize{~isinf([cellSize{:}])}]);
+            beta = min([cellSize{~isinf([cellSize{:}])}]);
             %alpha = 1.2;
-            P_Weighted = cellfun(@(p,de,u, nbg, i, cellsize) RegularizeIntensity(p,u,de,nbg,i,cellsize,alpha),P_cropped,De,U_cropped,nBG_cropped,I_cropped,cellSize,'uniformoutput',false);
-            P_Weighted_stat = cellfun(@(p,de,u, nbg, i, cellsize) RegularizeIntensity(p,u,de,nbg,i,cellsize,alpha),P_cropped_stat,De,U_cropped,nBG_cropped,I_cropped,cellSize,'uniformoutput',false);
+            P_Weighted = cellfun(@(p,de,u, nbg, i, cellsize) RegularizeIntensity(p,u,de,nbg,i,cellsize,beta),P_cropped,De,U_cropped,nBG_cropped,I_cropped,cellSize,'uniformoutput',false);
+            P_Weighted_stat = cellfun(@(p,de,u, nbg, i, cellsize) RegularizeIntensity(p,u,de,nbg,i,cellsize,beta),P_cropped_stat,De,U_cropped,nBG_cropped,I_cropped,cellSize,'uniformoutput',false);
             P_cropped_tot = cellfun(@createPTot ,P_Weighted,P_Weighted_stat,U_cropped,mu_cropped,mu_cropped_stat,'uniformoutput',false);
             
             %P = cellfun(@(Im,m) PadImage(Im,m,patchSize,patchSize,Height,Width,0),P_Weighted,mu,'uniformoutput',0);
@@ -465,7 +465,7 @@ try
         mu = cellfun(@(u,phi,phis) XY(:,(nBG(:)>0.5))*(u(nBG(:)>0.5))./max(sum(u(nBG(:)>0.5)),eps),U,Phi_moved,Phi_stat,'UniformOutput',false);
         end
         prev_size = cell_area;
-        cellSize = cellfun(@(u) round(I(:)'*u(:)),U,'uniformoutput',false);
+        %cellSize = cellfun(@(u) round(I(:)'*u(:)),U,'uniformoutput',false);
         cell_area = cellfun(@(u) sum(u(:)),U,'uniformoutput',false);
         [err,err_idx] = max(sqrt(sum((cell2mat(cell_area)-cell2mat(prev_size)).^2,1)));
         if any([cell_area{:}]==0)
@@ -525,11 +525,13 @@ try
     NotBGFull = NotBG;
     NotBG_Candidates = [];
     links = {};
-    strelOpen = strel('disk',4);
+    strelOpen = strel('disk',2);
     for l = unique(L(L>0))'
         BW = L==l;
         BW = imopen(BW,strelOpen);
+        BW = imfill(BW,'holes');
         L(L==l&~BW) = 0;
+        L(BW) = l;
         if ~any(BW(:))
             continue;
             Kalmans([Kalmans.ID]==l).enabled=false;
@@ -748,11 +750,11 @@ if any(isnan(SE(:)))||any(isnan(mu))||any(mu<1)||mu(1)>size(SE,1)||mu(2)>size(SE
     return
     %fprintf('Fast Marching will crash!')
 end
-Dg = max(graydist(1./SE,mu(2),mu(1),'quasi-euclidean'),eps);
+%Dg = max(graydist(1./SE,mu(2),mu(1),'quasi-euclidean'),eps);
 BW = zeros(size(SE));
 BW(mu(1),mu(2)) = 1;
 De = max(double(bwdist(BW,'quasi-euclidean')),eps);
-%Dg = max(msfm2d(SE,mu,true,true),eps);
+Dg = max(msfm2d(SE,mu,true,true),eps);
 DiffD = max(Dg-De,0);
 end
 
@@ -853,17 +855,17 @@ counter = counter+1;
 [~,sid] = sort(P_cropped(:),'descend');
 
 sortedSum = zeros(size(P_cropped));
-sortedSum(sid) = cumsum(I_cropped(sid).*(nBG_cropped(sid)));
+sortedSum(sid) = cumsum(I_cropped(sid));%.*(nBG_cropped(sid)));
 sortedSum = reshape(sortedSum,size(P_cropped));
 %PixelWeights = max(1e-4,min(1,(sortedSum./((1-alpha).*cellSize)-(alpha./(1-alpha)))));
 if isinf(cellSize)
     cellSize = sortedSum;
 end
-PixelWeights = max(0,(sortedSum - cellSize)./alpha+1);
+PixelWeights = max(0,(sortedSum - cellSize/2)./alpha+1);
 
 %PixelWeights = max(eps,min(1,(-(sortedSum-cellSize)./(alpha./10))+1));
 %PWeighted = PixelWeights.*P_cropped;
-PWeighted = (0.5*P_cropped).^PixelWeights;
+PWeighted = (0.99*P_cropped).^PixelWeights;
 end
             
 function distMap = calcDistMap(X,Y,mu,sig,patchSize)

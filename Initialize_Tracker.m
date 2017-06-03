@@ -26,7 +26,7 @@ for t = 1:min(tagged_data.Frame_Num,2)
     % Calculate and remove Background lighting
     [I,B] =  CalcBGLighting(I,L==0);
     I = max(I,0);
-    I = I./max(I(:))*Tracking.maxgray;
+    I = I./(Tracking.maxgray-max(Tracking.B(:)))*Tracking.maxgray;
     LCells = L>0;
     LBG = ~LCells;
     if Params.parameters.useGMM&&Params.parameters.HDGMM

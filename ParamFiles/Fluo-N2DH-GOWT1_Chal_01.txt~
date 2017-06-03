@@ -4,7 +4,7 @@ emailAddress = 'arbellea@post.bgu.ac.il' % OPTIONAL - will notify by email when 
 
 
 * load_data_params
-data_path = fullfile('/home/arbellea/ISBI-Challenge-Data/Training/Fluo-N2DH-GOWT1/01/'); % Path the the directory of the raw images
+data_path = fullfile('/home/arbellea/ISBI-Challenge-Data/C/Fluo-N2DH-GOWT1/01/'); % Path the the directory of the raw images
 extention = '*.tif'; % Extension of the raw images should be in the format '*.<EXTENSION>'
 expr = 't(\d+)' % Experesion of filenames. Replace the time index with (\d+)
 tagged_data_path = fullfile('/home/arbellea/ISBI-Challenge-Data/Training/Fluo-N2DH-GOWT1/01_MAN/');% Path the the directory of the segmentation of the first two frames
