@@ -49,7 +49,7 @@ disp('Initialize!!')
 Tracking = Initialize_Tracker(Data,TaggedData,Params);
 Tracking.stop_frame = Params.stop_frame;
 disp('Lets Go!!')
-saveDir = Track_and_Segment(Data,Tracking,Params,TaggedData);
+saveDir, Tracking = Track_and_Segment(Data,Tracking,Params,TaggedData);
 msg = sprintf('Done Analyzing %s\n Results saved at: %s',txtFileName,saveDir);
 
 if Params.Flags.WriteVideo
@@ -62,8 +62,9 @@ if Params.Flags.WriteVideo
         end
     copyfile(TaggedData.Frame_name{i},segfile,'f');
     end
-    
-    CreateOutputVideo(Data,saveDir, Params.Flags.ISBI);
+    if Params.save_params.save_outputs
+        CreateOutputVideo(Data, Tracking.Link, saveDir, Params.Flags.ISBI, Params.save_params);
+    end
 end
 
 catch err

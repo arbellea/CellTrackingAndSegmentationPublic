@@ -1,4 +1,4 @@
-function CreateOutputVideo(inputInfo,saveDir, ISBI)
+function CreateOutputVideo(inputInfo,Link,saveDir, ISBI, save_params)
 %{
 filelist = dir(fullfile(segDir,ext));
 base = ['Seg_%d',ext(2:end)];
@@ -8,12 +8,18 @@ sort_list = filelist(sort_idx);
 %}
 %segInfo = Load_Data(segDir,segExt);
 %%
-writerObj = VideoWriter(fullfile(saveDir,'Results.avi'));
-writerObj.FrameRate=2;
-open(writerObj);
+if save_params.save_video
+    if isempty(save_params.save_video_path)
+    writerObj = VideoWriter(fullfile(saveDir,'Results.avi'));
+    else
+       writerObj = VideoWriter(fullfile(save_params.save_video_path,'Results.avi'));
+    end
+    writerObj.FrameRate=2;
+    open(writerObj);
+end
 c = true;
 %%
-load(fullfile(saveDir,'Link.mat'));
+% load(fullfile(saveDir,'Link.mat'));
 longName = {};
 Base = [];
 Gen = {};
@@ -106,13 +112,25 @@ try
         frame = insertText(IB,int32(text_loc),cell_num_cell','FontSize',20,'TextColor','white','BoxOpacity',0);
         frame = cat(3,IR,IG,frame(:,:,3));
         idprev = id;
-        visFile = fullfile(saveDir,'Visualize',sprintf('Vis_%s%s',fname,fext));
+        if isempty(save_params.save_annotated_images_path)
+            visFile = fullfile(saveDir,'Visualize',sprintf('Vis_%s%s',fname,fext));
+        else
+            visFile = fullfile(save_params.save_annotated_images_path,sprintf('Vis_%s%s',fname,fext));
+        end
+        if save_params.save_annotated_images
         imwrite(frame,visFile);
-        writeVideo(writerObj,frame);
+        end
+        if save_params.save_video
+            writeVideo(writerObj,frame);
+        end
     end
-    close(writerObj);
+    if save_params.save_video
+        close(writerObj);
+    end
 catch err
-    close(writerObj);
+    if save_params.save_video
+        close(writerObj);
+    end
     rethrow(err);
 end
 end

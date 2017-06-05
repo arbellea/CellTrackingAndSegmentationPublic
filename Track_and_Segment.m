@@ -1,4 +1,4 @@
-function [save_dir_name,Kalmans] = Track_and_Segment(data,Tracking,Params,varargin)
+function [save_dir_name,Tracking, Kalmans] = Track_and_Segment(data,Tracking,Params,varargin)
 rng(1);
 if ~isempty(varargin)&&isstruct(varargin{1})
     taggedData = varargin{1};
@@ -7,7 +7,7 @@ end
 Link = struct();
 Images = {};
 Labels = [];
-Save_images = Params.Flags.WriteVideo;
+
 SaveCheckPoints = Params.Flags.SaveCheckPoints;
 LoadCheckPoints = Params.Flags.LoadCheckPoints;
 segParams = Params.parameters;
@@ -20,25 +20,45 @@ t(t==':')='-';
 if SaveCheckPoints||LoadCheckPoints
     t = 'CheckPoints';
 end
-if Save_images
-    save_dir_name =fullfile(getenv('HOME'),'Outputs',sprintf('Results_%s_%s',Params.General.Name,t));
-    save_dir_vis = fullfile(save_dir_name,'Visualize');
-    save_dir_res = fullfile(save_dir_name,'Results');
-    mkdir(save_dir_vis);
-    mkdir(save_dir_res);
+
+
+* save_params
+save_outputs = true;
+save_path = '';
+save_video = false;
+save_video_path = '';
+save_annotated_images = false;
+save_annotated_images_path = '';
+
+if Params.save_params.save_outputs
+    if isempty(Params.save_params.save_path)
+        save_dir_name =fullfile(getenv('HOME'),'Outputs',sprintf('Results_%s_%s',Params.General.Name,t));
+        save_dir_res = fullfile(save_dir_name,'Results');
+    else
+        save_dir_res = Params.save_params.save_outputs; 
+        save_dir_name = fullfile(save_dir_res, '..');
+    end
     mkdir(save_dir_name);
+    mkdir(save_dir_res);
+    
+    if Params.save_params.save_annotated_images
+        save_dir_vis = fullfile(save_dir_name,'Visualize');
+        mkdir(save_dir_vis);
+    end
+    
     if isfield(Params.Flags,'saveCode')&&Params.Flags.saveCode
         ticSaveCode = tic;
-    zipPath  = fullfile(save_dir_name,'Code.zip');
-    mainpath = fileparts(which('main.m'));
-    filelist = dir(mainpath);
-    hidden = arrayfun(@(f) (f.name(1)~='.')&&all(~strcmpi(f.name,{'mitodix.log','license'})),filelist);
-    fnames = arrayfun(@(f) fullfile(mainpath,f.name),filelist(hidden),'uniformoutput',false);
-    zip(zipPath,fnames);
-    tocSaveCode = toc(ticSaveCode);
-    fprintf('Done Saving Code in %0.3f seconds...\n',tocSaveCode)
+        zipPath  = fullfile(save_dir_name,'Code.zip');
+        mainpath = fileparts(which('main.m'));
+        filelist = dir(mainpath);
+        hidden = arrayfun(@(f) (f.name(1)~='.')&&all(~strcmpi(f.name,{'mitodix.log','license'})),filelist);
+        fnames = arrayfun(@(f) fullfile(mainpath,f.name),filelist(hidden),'uniformoutput',false);
+        zip(zipPath,fnames);
+        tocSaveCode = toc(ticSaveCode);
+        fprintf('Done Saving Code in %0.3f seconds...\n',tocSaveCode)
     end
 end
+
 save_dir_checkp = fullfile(save_dir_name,'CheckPoints');
 if SaveCheckPoints
     
@@ -256,7 +276,7 @@ try
         fprintf('Done Kalman Update of frame %d in %f seconds...\n',t,timeKUp);
         [Kalmans([Kalmans.new]).new] = deal(false);
         tSave = tic;
-        if Save_images
+        if Params.save_params.save_outpus
             
             if ISBI
                 frame_name = fullfile(save_dir_res,sprintf('mask%03d.tif',t-1));
@@ -401,12 +421,13 @@ try
         fprintf('Elapsed time for Frame %d is %2.5f\n',t,tEndFrame)
         
     end
+    Tracking.Link = Link;
     if ISBI
         dlmwrite(fullfile(save_dir_name,'Results','res_track.txt'),Tracking.ISBI_RES,' ')
     end
-    if Save_images
-        save(fullfile(save_dir_name,'Link.mat'),'Link');
-    end
+%     if Save_images
+%         save(fullfile(save_dir_name,'Link.mat'),'Link');
+%     end
 catch err
     if SaveCheckPoints
             Tracking.Link = Link;

@@ -11,6 +11,7 @@ tagged_extention = '*.tif'; % Extension of the raw images should be in the forma
 tagged_expr = 'ManualSeg_(\d+).tif' % Experesion of filenames. Replace the time index with (\d+)
 
 * save_params
+save_outputs = true
 save_path = '';
 save_video = false;
 save_video_path = '';
