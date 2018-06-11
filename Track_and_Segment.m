@@ -21,15 +21,6 @@ if SaveCheckPoints||LoadCheckPoints
     t = 'CheckPoints';
 end
 
-
-* save_params
-save_outputs = true;
-save_path = '';
-save_video = false;
-save_video_path = '';
-save_annotated_images = false;
-save_annotated_images_path = '';
-
 if Params.save_params.save_outputs
     if isempty(Params.save_params.save_path)
         save_dir_name =fullfile(getenv('HOME'),'Outputs',sprintf('Results_%s_%s',Params.General.Name,t));
